@@ -7,6 +7,15 @@
 #include <r_th.h>
 #include <r_emu.h>
 
+#define	R_EMU_INTERACTOR_JOYPAD_A	(0x1 << 0)
+#define	R_EMU_INTERACTOR_JOYPAD_B	(0x1 << 1)
+#define	R_EMU_INTERACTOR_JOYPAD_START	(0x1 << 2)
+#define	R_EMU_INTERACTOR_JOYPAD_SELECT	(0x1 << 3)
+#define	R_EMU_INTERACTOR_JOYPAD_UP	(0x1 << 4)
+#define	R_EMU_INTERACTOR_JOYPAD_DOWN	(0x1 << 5)
+#define	R_EMU_INTERACTOR_JOYPAD_LEFT	(0x1 << 6)
+#define	R_EMU_INTERACTOR_JOYPAD_RIGHT	(0x1 << 7)
+
 typedef struct r_emu_interactor_t {
 	struct r_emu_interactor_plugin_t *plugin;
 	void *user;
