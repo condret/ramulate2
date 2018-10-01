@@ -29,6 +29,6 @@ typedef struct r_emulator_plugin_t {
 	//setup custom esil operations
 //	bool (*set_esil_hooks)(RAnalEsil *esil, void *user);
 	//setup esil MODIFIER hooks for memory and register access
-	bool (*pre_loop)(REmu *emu);
+	bool (*pre_loop)(REmu *emu, RAnalOp *op);
 	bool (*post_loop)(REmu *emu);
 } REmuPlugin;
