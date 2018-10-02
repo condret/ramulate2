@@ -37,3 +37,13 @@ typedef struct r_emu_interactor_plugin_t {
 	void (*init_sound)(REmuInteractor *ei, ut8 voices);
 //	void (*play_wave)(ut8 voice, ...)	//what to do here
 } REmuInteractorPlugin;
+
+
+
+R_API REmuInteractorPlugin *r_emu_interactor_plugin_get(char *name);
+R_API void *r_emu_interactor_plugin_init(REmuInteractorPlugin *eip);
+R_API void r_emu_interactor_plugin_fini(REmuInteractorPlugin *eip, REmuInteractor *ei);
+R_API ut8 r_emu_interactor_plugin_poll_joypad(REmuInteractorPlugin *eip, REmuInteractor *ei);
+R_API void r_emu_interactor_plugin_init_screen(REmuInteractorPlugin *eip, REmuInteractor *ei, ut16 width, ut16 height, bool fullscreen);
+R_API void r_emu_interactor_plugin_set_pixel(REmuInteractorPlugin *eip, REmuInteractor *ei, ut16 x, ut16 y, ut32 rgb);
+R_API void r_emu_interactor_plugin_init_sound(REmuInteractorPlugin *eip, REmuInteractor *ei, ut8 voices);
