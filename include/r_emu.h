@@ -23,12 +23,12 @@ typedef struct r_emulator_plugin_t {
 	//allocation
 	void (*fini)(void *user);
 	//deallocation
-//	bool (*set_interrupts)(RAnalEsil *esil, void *user);
-	//setup interrupt handlers
-//	bool (*set_custom_ops)(RAnalEsil *esil, void *user);
-	//setup custom esil operations
-//	bool (*set_esil_hooks)(RAnalEsil *esil, void *user);
-	//setup esil MODIFIER hooks for memory and register access
 	bool (*pre_loop)(REmu *emu, RAnalOp *op);
 	bool (*post_loop)(REmu *emu);
 } REmuPlugin;
+
+R_API REmuPlugin *r_emu_plugin_get(char *arch);
+R_API void *r_emu_plugin_init(REmuPlugin *p, REmu *emu);
+R_API void r_emu_plugin_fini(REmuPlugin *p, void *user);
+R_API bool r_emu_plugin_pre_loop(REmuPlugin *p, REmu *emu, RAnalOp *op);
+R_API bool r_emu_plugin_post_loop(REmuPlugin *p, REmu *emu);
