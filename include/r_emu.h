@@ -32,3 +32,8 @@ R_API void *r_emu_plugin_init(REmuPlugin *p, REmu *emu);
 R_API void r_emu_plugin_fini(REmuPlugin *p, void *user);
 R_API bool r_emu_plugin_pre_loop(REmuPlugin *p, REmu *emu, RAnalOp *op);
 R_API bool r_emu_plugin_post_loop(REmuPlugin *p, REmu *emu);
+
+R_API REmu *r_emu_new();
+R_API bool r_emu_load(REmu *emu, char *arch);
+R_API void r_emu_unload(REmu *emu);
+R_API void r_emu_free (REmu *emu);

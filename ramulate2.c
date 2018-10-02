@@ -25,6 +25,7 @@ static int raboy (char *gb_rom_path) {
 	}
 
 	emu = r_emu_new();
+//select default interactor plugin
 	if (!emu) {
 		eprintf ("cannot alloc r_emu\n");
 		r_bin_free (bin);
@@ -34,23 +35,19 @@ static int raboy (char *gb_rom_path) {
 	fd = r_io_fd_open (emu->io, gb_rom_path, R_IO_READ, 0644);
 	r_bin_iobind (bin, io);
 	if (!r_bin_load_io (bin, fd, 0, 0, 0, 0, NULL)) {
-		eprintf ("not a gb rom\n");
+		eprintf ("cannot load bin_info\n");
 		r_bin_free (bin);
 		goto beach;
 	}
 	RBinInfo *info = r_bin_get_info (bin);
-	if (!info || strcmp (info->arch, "gb")) {
-		eprintf ("not a gb rom\n");
+	if (!info || !r_emu_load(emu, info->arch)) {
+		eprintf ("no plugin for %s\n", info->arch);
 		r_bin_free (bin);
 		goto beach;
 	}
 	r_bin_free (bin);
 
-//init allegro
-//init gb
 //enter loop
-//fini gb
-//fini allegro
 
 beach:
 	r_emu_free (emu);
