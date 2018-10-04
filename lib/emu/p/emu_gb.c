@@ -103,13 +103,28 @@ static bool gb_pre_loop (REmu *emu, RAnalOp *op) {
 
 static bool gb_post_loop (REmu *emu) {
 	Gameboy *gb;
-	ut8 ime, iflags, ieflags, joypad;
+	ut8 ime, iflags, ieflags, joypad, iv, intr, i;
 	if (!emu || !emu->user) {
 		return false;
 	}
 	ime = r_reg_getv(emu->anal->reg, "ime");
 	r_io_fd_read_at (emu->io, gb->if_fd, 0LL, &iflags, 1);
 	r_io_fd_read_at (emu->io, gb->ie_fd, 0LL, &ieflags, 1);
+	joypad = r_emu_interactor_poll_joypad (emu->interactor);
+	if (joypad != gb->joypad) {
+		iflags |= 0x10;
+	}
+	iv = ime ? iflags & eiflags : 0;
+	intr = 0;
+	for (i = 0; i < 5; i++) {
+		if (iv & (1<<i)) {
+			intr = 40 + i << 3;
+			break;
+		}
+	}
+	if (intr) {
+		r_anal_esil_fire_interrupt (emu->esil, intr);
+	}
 	//TODO
 	return true;
 }
