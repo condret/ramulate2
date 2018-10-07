@@ -97,7 +97,29 @@ static void gb_fini (void *user) {
 	free (user);	//io will cleanup itself :D
 }
 
-static bool gb_pre_loop (REmu *emu, RAnalOp *op) {
+static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
+	Gameboy *gb = (Gameboy *)emu->user;
+	if (bytes[0] == 0x10) {
+		r_strbuf_set (op->esil, "STOP");
+		gb->sleep = op->cycles = 0;
+		return true;
+	}
+	if (bytes[0] == 0x76) {
+		r_strbuf_set (op->esil, "HALT");
+		gb->sleep = op->cycles = 0;
+		return true;
+	}
+
+	switch (op->type) {
+	case R_ANAL_OP_TYPE_CRET:	//I'm a condret :)
+	case R_ANAL_OP_TYPE_CJMP:
+	case R_ANAL_OP_TYPE_UCJMP:
+	case R_ANAL_OP_TYPE_CCALL:
+	case R_ANAL_OP_TYPE_UCCALL:
+		gb->not_match_sleep_addr = op->addr + op->size;
+		gb->not_match_sleep = op->cycles - op->failcycles;
+	}
+	if (op->failcycles)
 	return true;
 }
 

@@ -40,6 +40,9 @@ typedef struct gameboy_memory_mapped_screen_t {
 } GBMMSCR;
 
 typedef struct gameboy_t {
+	ut32 sleep;
+	ut32 not_match_sleep;
+	ut64 not_match_sleep_addr;
 	int hram_fd;		//this is r_io_fd_open (io, "malloc://0x7f", R_IO_RW | R_IO_EXEC, 0644);
 	ut32 hram_map_id;	//this is r_io_map_add (io, hram_fd, R_IO_RW | R_IO_EXEC, 0LL, 0xff80, 0x7f);
 	int vram_fd;		//this is r_io_fd_open (io, "malloc://0x2000", R_IO_RW | R_IO_EXEC, 0644);
