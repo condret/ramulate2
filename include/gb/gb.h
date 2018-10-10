@@ -12,11 +12,15 @@ typedef struct gameboy_memory_mapped_serial_transfere_t {
 } GBMMST;
 
 typedef struct gameboy_memory_mapped_timers_t {
-	ut8 div;	//0000 : ff04
+	ut16 div;	//0000 : ff04	// only upper byte gets exposed
 	ut8 tima;	//0001 : ff05
 	ut8 tma;	//0002 : ff06
 	ut8 tac;	//0003 : ff07
 } GBMMTMR;
+
+#define	gb_proceed_div(timers, cycles)	((timers)->div += (cycles))
+#define	gb_set_div(timers, val)	((timers)->div = ((val) & 0xff) << 8)
+#define	gb_get_div(timers)	(((timers)->div & 0xff00) >> 8)
 
 typedef struct gameboy_memory_mapped_sound_t {
 	ut8 nr[23];	//0000 : ff10 - ff26 //closed interval
@@ -43,6 +47,7 @@ typedef struct gameboy_sleeper_t {
 	R_EMU_TH_TID tid;
 	R_EMU_TH_LOCK lock;
 	bool repeat;
+	bool sleeping;
 	ut32 to_sleep;		//unit: 100ns, bc windows cannot handle the truth
 } GBSleeper;
 

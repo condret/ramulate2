@@ -102,13 +102,25 @@ static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
 	if (bytes[0] == 0x10) {
 		r_strbuf_set (op->esil, "STOP");
 		gb->sleep = op->cycles = 0;
+		//wait for sleeper to wake up
 		return true;
 	}
 	if (bytes[0] == 0x76) {
 		r_strbuf_set (op->esil, "HALT");
 		gb->sleep = op->cycles = 0;
+		//wait for sleeper to wake up
 		return true;
 	}
+
+
+	//wait for sleeper to wake up
+	//r_emu_th_lock_lock (gb->sleeper->lock)
+	//while (!gb->sleeper->sleeping) { nop; }
+	//activate sleeper here:
+	//gb->sleeper->to_sleep = op->cycles;
+	//r_emu_th_lock_unlock (gb->sleeper->lock)
+
+	gb_proceed_div (&gb->timers, op->cycles);
 
 	switch (op->type) {
 	case R_ANAL_OP_TYPE_CRET:	//I'm a condret :)
@@ -119,16 +131,28 @@ static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
 		gb->not_match_sleep_addr = op->addr + op->size;
 		gb->not_match_sleep = op->cycles - op->failcycles;
 	}
-	if (op->failcycles)
 	return true;
 }
 
 static bool gb_post_loop (REmu *emu) {
 	Gameboy *gb;
 	ut8 ime, iflags, ieflags, joypad, iv, intr, i;
+	ut16 pc;
 	if (!emu || !emu->user) {
 		return false;
 	}
+	gb = (Gameboy *)emu->user;
+	pc = r_reg_getv(emu->anal->reg, "pc");
+	if (pc != gb->not_match_sleep_addr) {
+		//r_emu_th_lock_lock (gb->sleeper->lock);
+		//gb->sleeper->to_sleep += gb->not_match_sleep;
+		//r_emu_th_lock_unlock (gb->sleeper->lock);
+		gb_proceed_div (&gb->timers, gb->not_match_sleep);
+	}
+	gb->sleep = 0;
+	gb->not_match_sleep = 0;
+	gb->not_match_sleep_addr = 0LL;
+
 	ime = r_reg_getv(emu->anal->reg, "ime");
 	r_io_fd_read_at (emu->io, gb->if_fd, 0LL, &iflags, 1);
 	r_io_fd_read_at (emu->io, gb->ie_fd, 0LL, &ieflags, 1);
