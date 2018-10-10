@@ -112,13 +112,15 @@ static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
 		return true;
 	}
 
-
+	//prepare sleeper for next instruction
+	r_emu_th_lock_lock (&gb->sleeper->lock)
+	gb->sleeper->to_sleep = op->cycles;
 	//wait for sleeper to wake up
-	//r_emu_th_lock_lock (gb->sleeper->lock)
-	//while (!gb->sleeper->sleeping) { nop; }
+	while (!gb->sleeper->sleeping) {
+		r_emu_nop();
+	}
 	//activate sleeper here:
-	//gb->sleeper->to_sleep = op->cycles;
-	//r_emu_th_lock_unlock (gb->sleeper->lock)
+	r_emu_th_lock_unlock (&gb->sleeper->lock)
 
 	gb_proceed_div (&gb->timers, op->cycles);
 
@@ -144,9 +146,9 @@ static bool gb_post_loop (REmu *emu) {
 	gb = (Gameboy *)emu->user;
 	pc = r_reg_getv(emu->anal->reg, "pc");
 	if (pc != gb->not_match_sleep_addr) {
-		//r_emu_th_lock_lock (gb->sleeper->lock);
-		//gb->sleeper->to_sleep += gb->not_match_sleep;
-		//r_emu_th_lock_unlock (gb->sleeper->lock);
+		r_emu_th_lock_lock (&gb->sleeper->lock);
+		gb->sleeper->to_sleep += gb->not_match_sleep;
+		r_emu_th_lock_unlock (&gb->sleeper->lock);
 		gb_proceed_div (&gb->timers, gb->not_match_sleep);
 	}
 	gb->sleep = 0;

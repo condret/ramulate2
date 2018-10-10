@@ -37,6 +37,9 @@ R_API bool r_emu_load(REmu *emu, char *arch);
 R_API void r_emu_unload(REmu *emu);
 R_API void r_emu_free (REmu *emu);
 
+
+#define	r_emu_nop()	asm volatile ("nop")
+
 #if __WINDOWS__
 #include <windows.h>
 #define	R_EMU_TH_TID	HANDLE
