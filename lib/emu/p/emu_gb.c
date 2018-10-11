@@ -15,61 +15,139 @@
 #define	R_IO_RX		R_IO_READ | R_IO_EXEC
 #endif
 
-#if 0
+
+typedef struct gameboy_seek_t {
+	Gameboy *gb;
+	ut64 off;
+} GBSeek;
+
 char gbstrbuf[128];
 
-static RIODesc *__gb_iflags_open (RIO *io, const char *path, int rwx, int mode) {
+static RIODesc *__gb_timers_open (RIO *io, const char *path, int rwx, int mode) {
 	RIODesc *desc;
+	GBSeek *gbseek = R_NEW0(GBSeek);
+	if (!gbseek) {
+		return NULL;
+	}
 
 	desc = R_NEW0 (RIODesc);
-	if (desc) {
-		desc->data = (void *)(size_t)r_num_get (NULL, &path[12]);
-		desc->flags = rwx;
+	if (!desc) {
+		free (gbseek);
+		return NULL;
 	}
+
+	gbseek->gb = (Gameboy *)(size_t)r_num_get (NULL, &path[12]);
+	desc->data = gbseek;
+	desc->flags = rwx;
+
 	return desc;
 }
 
-static int __gb_iflags_close (RIODesc *desc) {
-	return 0;
-}
-
-static int __gb_iflags_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
-	if (desc && desc->data && buf && len) {
-		buf[0] = ((ut8 *)(desc->data))[0];
-		return 1;
+static int __gb_timers_close (RIODesc *desc) {
+	if (desc) {
+		free (desc->data);
 	}
 	return 0;
 }
 
-static int __gb_iflags_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
-	if (desc && desc->data && buf && len) {
-		((ut8 *)(desc->data))[0] = buf[0];
-		return 1;
+static int __gb_timers_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
+	GBSeek *gbs;
+	ut32 elen, ret;		//length to read
+	if (!(desc && desc->data && buf && len)) {
+		return 0;
 	}
-	reutrn 0;
+	gbs = (GBSeek *)desc->data;
+	if (gbs->off > 3) {	//out of file
+		return 0;
+	}
+	elen = R_MIN (len, 4) - gbs->off;
+	for (ret = 0; ret < elen; ret++) {
+		switch (gbs->off) {
+		case 0:		//div
+			buf[ret] = gb_get_div(gbs->gb->timers);
+			break;
+		case 1:		//tima
+			buf[ret] = gb_get_tima(gbs->gb->timers);
+			break;
+		case 2:		//tma
+			buf[ret] = gbs->gb->timers.tma;
+			break;
+		case 3:		//tac
+			buf[ret] = gbs->gb->timers.tac;
+			break;
+		}
+		gbs->off++;
+	}
+
+	return ret;
 }
 
-static ut64 __gb_iflags_lseek (RIO *io, RIODesc *desc, ut64 off, int whence) {
-	return (whence == R_IO_SEEK_END) ? 1 : 
-		(whence == R_IO_SEEK_SET) ? (off > 0) : 0;	//XXX
+static int __gb_timers_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
+	GBSeek *gbs;
+	ut32 elen, ret;		//length to read
+	if (!(desc && desc->data && buf && len)) {
+		return 0;
+	}
+	gbs = (GBSeek *)desc->data;
+	if (gbs->off > 3) {	//out of file
+		return 0;
+	}
+	elen = R_MIN (len, 4) - gbs->off;
+	for (ret = 0; ret < elen; ret++) {
+		switch (gbs->off) {
+		case 0:		//div
+			gbs->gb->timers.div = 0;
+			break;
+		case 3:		//tac
+			gbs->gb->timers.tac = buf[ret] & 7;
+		case 1:		//tima
+			gbs->gb->timers.tima = 0;	//is this correct?
+			break;
+		case 2:		//tma
+			gbs->gb->timers.tma = buf[ret];
+			break;
+		}
+		gbs->off++;
+	}
+
+	return ret;
 }
 
-static bool __gb_iflags_check (RIO *io, const char *path, bool many) {
-	return path && (strstr(path, "gb_iflags://") == path);
+static ut64 __gb_timers_lseek (RIO *io, RIODesc *desc, ut64 off, int whence) {
+	GBSeek *gbs;
+	if (!(desc && desc->data)) {
+		return 0LL;
+	}
+	gbs = (GBSeek *)desc->data;
+	switch (whence) {
+	case R_IO_SEEK_END:
+		gbs->off = 4 + off;
+		break;
+	case R_IO_SEEK_SET:
+		gbs->off = off;
+		break;
+	case R_IO_SEEK_CUR:
+		gbs->off += off;
+		break;
+	}
+	return gbs->off;
 }
 
-RIOPlugin r_io_wild_gb_iflags_plugin {
-	.name = "gb_interrupt_flags",
-	.desc = "Show status of the pending interrupts",
+static bool __gb_timers_check (RIO *io, const char *path, bool many) {
+	return path && (strstr(path, "gb_timers://") == path);
+}
+
+RIOPlugin r_io_wild_gb_timers_plugin {
+	.name = "gb_timers",
+	.desc = "Represent GB-Timers",
 	.license = "LGPL3",
-	.open = __gb_iflags_open,
-	.close = __gb_iflags_close,
-	.read = __gb_iflags_read,
-	.write = __gb_iflags_write,
-	.lseek = __gb_iflags_lseek,
-	.check = __gb_iflags_check,
+	.open = __gb_timers_open,
+	.close = __gb_timers_close,
+	.read = __gb_timers_read,
+	.write = __gb_timers_write,
+	.lseek = __gb_timers_lseek,
+	.check = __gb_timers_check,
 };
-#endif
 
 static void *gb_init (REmu *emu) {
 	Gameboy *gb = R_NEW(Gameboy);
@@ -144,7 +222,7 @@ static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
 	//activate sleeper here:
 	r_emu_th_lock_unlock (&gb->sleeper->lock)
 
-	gb_proceed_div (&gb->timers, op->cycles);
+	gb_proceed_div (gb->timers, op->cycles);
 	gb_proceed_tima (gb, op->cycles);
 
 	switch (op->type) {
@@ -172,7 +250,7 @@ static bool gb_post_loop (REmu *emu) {
 		r_emu_th_lock_lock (&gb->sleeper->lock);
 		gb->sleeper->to_sleep += gb->not_match_sleep;
 		r_emu_th_lock_unlock (&gb->sleeper->lock);
-		gb_proceed_div (&gb->timers, gb->not_match_sleep);
+		gb_proceed_div (gb->timers, gb->not_match_sleep);
 		gb_proceed_tima (gb, gb->not_match_sleep);
 	}
 	gb->sleep = 0;

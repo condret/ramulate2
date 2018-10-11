@@ -18,9 +18,10 @@ typedef struct gameboy_memory_mapped_timers_t {
 	ut8 tac;	//0003 : ff07
 } GBMMTMR;
 
-#define	gb_proceed_div(timers, cycles)	((timers)->div += (cycles))
-#define	gb_set_div(timers, val)	((timers)->div = ((val) & 0xff) << 8)
-#define	gb_get_div(timers)	(((timers)->div & 0xff00) >> 8)
+#define	gb_proceed_div(timers, cycles)	((timers).div += (cycles))
+#define	gb_set_div(timers, val)	((timers).div = ((val) & 0xff) << 8)
+#define	gb_get_div(timers)	(((timers).div & 0xff00) >> 8)
+#define	gb_get_tima(timers)	(((timers).tima & 0xff0000) >> 16)
 
 typedef struct gameboy_memory_mapped_sound_t {
 	ut8 nr[23];	//0000 : ff10 - ff26 //closed interval
