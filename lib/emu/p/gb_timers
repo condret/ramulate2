@@ -1,0 +1,37 @@
+CPU:		4194304Hz
+div-register:	16384Hz		->	increments every 256 cycles
+tima-register:	based on tac
+		tac-register:
+			bit 2	: switch (tima: on/off)
+			bit 0+1	:
+				00:	4096Hz		-> 1024 cycles
+				01:	262144Hz	-> 16 cycles
+				10:	65536Hz		-> 64 cycles
+				11:	16384Hz		-> 256 cycles
+	every gb instruction is multiple of 4, so lets ignore the first 2 bits
+			>> 2
+				00:	256		->this is fine, exactly 1 byte: so shift incoming 2 bit right: >> 2
+				01:	4
+				10:	16
+				11:	64
+
+			reset
+
+				01:	16
+				10:	64
+				11:	256		->fine, no shift for incoming needed
+
+			<< 2
+
+				01:	64
+				10:	256		->fine, 2 shifts left
+
+			<< 4
+
+				01:	256		->purrrrrfect
+
+
+				00:	>> 2
+				01:	<< 4
+				10:	<< 2
+				11:	(no shift)

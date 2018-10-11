@@ -97,6 +97,28 @@ static void gb_fini (void *user) {
 	free (user);	//io will cleanup itself :D
 }
 
+static void gb_proceed_tima (Gameboy *gb, ut32 cycles) {
+	if (!(gb->timers.tac & 0x4)) {
+		return;
+	}
+	switch (gb->timers.tac & 0x3) {
+	case 0:
+		cycles >>= 2;
+		break;
+	case 1:
+		cycles <<= 4;
+		break;
+	case 2:
+		cycles <<= 2;
+		break;
+	}
+	gb->timers.tima += cycles;
+	if (gb->timers.tima & 0xffff0000) {
+		gb->timers.tima = 0xff | (gb->timers.tma << 8);
+		//gb_request_interrupt(gb, 2);
+	}
+}
+
 static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
 	Gameboy *gb = (Gameboy *)emu->user;
 	if (bytes[0] == 0x10) {
@@ -123,6 +145,7 @@ static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
 	r_emu_th_lock_unlock (&gb->sleeper->lock)
 
 	gb_proceed_div (&gb->timers, op->cycles);
+	gb_proceed_tima (gb, op->cycles);
 
 	switch (op->type) {
 	case R_ANAL_OP_TYPE_CRET:	//I'm a condret :)
@@ -150,6 +173,7 @@ static bool gb_post_loop (REmu *emu) {
 		gb->sleeper->to_sleep += gb->not_match_sleep;
 		r_emu_th_lock_unlock (&gb->sleeper->lock);
 		gb_proceed_div (&gb->timers, gb->not_match_sleep);
+		gb_proceed_tima (gb, gb->not_match_sleep);
 	}
 	gb->sleep = 0;
 	gb->not_match_sleep = 0;

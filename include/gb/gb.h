@@ -13,7 +13,7 @@ typedef struct gameboy_memory_mapped_serial_transfere_t {
 
 typedef struct gameboy_memory_mapped_timers_t {
 	ut16 div;	//0000 : ff04	// only upper byte gets exposed
-	ut8 tima;	//0001 : ff05
+	ut32 tima;	//0001 : ff05	// only &0xff00 >> 8 gets exposed
 	ut8 tma;	//0002 : ff06
 	ut8 tac;	//0003 : ff07
 } GBMMTMR;
