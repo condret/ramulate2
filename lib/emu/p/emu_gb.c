@@ -231,6 +231,18 @@ static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	elen = R_MIN (len, 12) - gbs->off;
 	for (ret = 0; ret < elen; ret++) {
 		switch (gbs->off) {
+		case 0x02:		//scy
+			buf[ret] = gbs->gb->screen.scy;
+			break;
+		case 0x03:
+			buf[ret] = gbs->gb->screen.scx;
+			break;
+		case 0x04:
+			buf[ret] = gbs->gb->screen.ly;
+			break;
+		case 0x05:
+			buf[ret] = gbs->gb->screen.lyc;
+			break;
 			//TODO
 		}
 		gbs->off++;
@@ -252,6 +264,15 @@ static int __gb_screen_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	elen = R_MIN (len, 12) - gbs->off;
 	for (ret = 0; ret < elen; ret++) {
 		switch (gbs->off) {
+		case 0x02:		//scy
+			gbs->gb->screen.scy = bur[ret];
+			break;
+		case 0x03:
+			gbs->gb->screen.scx = bur[ret];
+			break;
+		case 0x05:
+			gbs->gb->screen.lyc = bur[ret];
+			break;
 		case 0x06:		//dma
 			gbs->gb->screen.dma.reg = buf[ret];
 			gbs->gb_enter_dma (gbs->gb, io);
