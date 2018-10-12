@@ -64,6 +64,12 @@ typedef struct gameboy_t {
 //for vblank and hblank we can just set the map->flags to 0 (use the API, don't d0 it by hand).
 //for dm access, via dma register, we can either temporary enable access via highlevel r_io_read_at
 //or we use the r_io_fd api, since the io-fd is still accessible, when the map is not
+	int oam_fd;
+	ut32 oam_map_id;
+	int timers_fd;
+	ut32 timers_map_id;
+	int screen_fd;
+	ut32 screen_map_id;
 	int if_fd;
 	int ie_fd;
 /*	-----------	*/

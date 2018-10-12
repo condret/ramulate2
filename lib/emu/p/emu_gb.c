@@ -149,6 +149,88 @@ RIOPlugin r_io_wild_gb_timers_plugin {
 	.check = __gb_timers_check,
 };
 
+static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
+	GBSeek *gbs;
+	ut32 elen, ret;		//length to read
+	if (!(desc && desc->data && buf && len)) {
+		return 0;
+	}
+	gbs = (GBSeek *)desc->data;
+	if (gbs->off > 11) {	//out of file
+		return 0;
+	}
+	elen = R_MIN (len, 12) - gbs->off;
+	for (ret = 0; ret < elen; ret++) {
+		switch (gbs->off) {
+			//TODO
+		}
+		gbs->off++;
+	}
+
+	return ret;
+}
+
+static int __gb_screen_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
+	GBSeek *gbs;
+	ut32 elen, ret;		//length to read
+	if (!(desc && desc->data && buf && len)) {
+		return 0;
+	}
+	gbs = (GBSeek *)desc->data;
+	if (gbs->off > 11) {	//out of file
+		return 0;
+	}
+	elen = R_MIN (len, 12) - gbs->off;
+	for (ret = 0; ret < elen; ret++) {
+		switch (gbs->off) {
+		case 0x06:		//dma
+			gbs->gb->screen.dma = buf[ret];
+			gbs->gb_enter_dma (gbs->gb);
+			break;
+			//TODO
+		}
+		gbs->off++;
+	}
+
+	return ret;
+}
+
+static ut64 __gb_screen_lseek (RIO *io, RIODesc *desc, ut64 off, int whence) {
+	GBSeek *gbs;
+	if (!(desc && desc->data)) {
+		return 0LL;
+	}
+	gbs = (GBSeek *)desc->data;
+	switch (whence) {
+	case R_IO_SEEK_END:
+		gbs->off = 12 + off;
+		break;
+	case R_IO_SEEK_SET:
+		gbs->off = off;
+		break;
+	case R_IO_SEEK_CUR:
+		gbs->off += off;
+		break;
+	}
+	return gbs->off;
+}
+
+static bool __gb_screen_check (RIO *io, const char *path, bool many) {
+	return path && (strstr(path, "gb_screen://") == path);
+}
+
+RIOPlugin r_io_wild_gb_screen_plugin {
+	.name = "gb_screen",
+	.desc = "Represent GB-Timers",
+	.license = "LGPL3",
+	.open = __gb_timers_open,	//it works in the exact same way
+	.close = __gb_timers_close,	//no need for duplicated functions
+	.read = __gb_screen_read,
+	.write = __gb_screen_write,
+	.lseek = __gb_screen_lseek,
+	.check = __gb_screen_check,
+};
+
 static void *gb_init (REmu *emu) {
 	Gameboy *gb = R_NEW(Gameboy);
 	if (!gb) {
@@ -158,10 +240,14 @@ static void *gb_init (REmu *emu) {
 	gb->hram_map_id = r_map_add (emu->io, gb->hram_fd, R_IO_RWX, 0LL, 0xff80, 0x7f);
 	gb->vram_fd = r_io_fd_open (emu->io, "malloc://0x2000", R_IO_RWX, 0644);
 	gb->vram_map_id = r_io_map_add (emu->io, gb->vram_fd, R_IO_RWX, 0LL, 0x8000, 0x2000);
-#if 0
-	sprintf (gbstrbuf, "gb_iflags://%p", &gb->interrupt_flags);
-	gb->iflags_fd = r_io_desc_open_plugin(emu->io, &r_io_wild_gb_iflags_plugin, gbstrbuf, R_IO_RWX, 0644)->fd;	//well, this might segfault, but E_TOO_LAZY
-	r_io_map_add (emu->io, gb->iflags_fd, R_IO_RWX, 0LL, 0xff0f, 1);
+	gb->oam_fd = r_io_fd_open (emu->io, "malloc://0xa0", R_IO_RWX, 0644);
+	gb->oam_map_id = r_io_map_add (emu->io, gb->oam_fd, R_IO_RWX, 0LL, 0xfe00);
+	sprintf (gbstrbuf, "gb_timers://%p", gb);
+	gb->timers_fd = r_io_desc_open_plugin(emu->io, &r_io_wild_gb_timers_plugin, gbstrbuf, R_IO_RWX, 0644)->fd;	//well, this might segfault, but E_TOO_LAZY
+	gb->timers_map_id = r_io_map_add (emu->io, gb->timers_fd, R_IO_RWX, 0LL, 0xff04, 4);
+	sprintf (gbstrbuf, "gb_screen://%p", gb);
+	gb->screen_fd = r_io_desc_open_plugin(emu->io, &r_io_wild_gb_screen_plugin, gbstrbuf, R_IO_RWX, 0644)->fd;
+	gb->screen_map_id = r_io_map_add (emu->io, gb->screen_fd, R_IO_RWX, 0LL, 0xff40, 12);
 #endif
 	gb->if_fd = r_io_fd_open (emu->io, "malloc://1", R_IO_RWX, 0644);
 	r_io_map_add (emu->io, gb->if_fd, R_IO_RWX, 0LL, 0xff0f, 1);
