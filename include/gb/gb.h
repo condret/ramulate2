@@ -29,6 +29,13 @@ typedef struct gameboy_memory_mapped_sound_t {
 	ut8 wav[16];	//0020 : ff30 - ff3f
 } GBMMSND;
 
+typedef struct gameboy_memory_mapped_dma_t {
+	ut8 reg;
+	ut16 src;
+//	ut8 mod;
+	ut16 remaining_cycles;
+} GBDMA;
+
 typedef struct gameboy_memory_mapped_screen_t {
 	ut8 lcdc;	//ff40
 	ut8 stat;	//ff41
@@ -36,7 +43,7 @@ typedef struct gameboy_memory_mapped_screen_t {
 	ut8 scx;	//ff43
 	ut8 ly;		//ff44
 	ut8 lyc;	//ff45
-	ut8 dma;	//ff46
+	GBDMA dma;	//ff46
 	ut8 bgp;	//ff47
 	ut8 obp0;	//ff48
 	ut8 obp1;	//ff49

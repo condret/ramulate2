@@ -149,6 +149,75 @@ RIOPlugin r_io_wild_gb_timers_plugin {
 	.check = __gb_timers_check,
 };
 
+static void gb_enter_dma(Gameboy *gb, RIO *io) {
+	if (gb->screen.dma.remaining_cycles) {	//not sure if reentering is possible
+		return;
+	}
+
+	gb->screen.dma.remaining_cycles = 640;	//160 * 4
+	gb->screen.dma.src = gb->screen.dma.reg << 8;
+
+	//this locks oam access from r_io_read_at and r_io_write_at
+	RIOMap *oam_map = r_io_map_resolve (io, gb->oam_map_id);
+	oam_map->flags = 0;
+}
+
+static void gb_leave_dma(Gameboy *gb, RIO *io) {
+	if (gb->screen.dma.remaining_cycles) {	//not finished
+		return;
+	}
+
+	gb->screen.dma.src = 0;
+
+	RIOMap *oam_map = r_io_map_resolve (io, gb->oam_map_id);
+	oam_map->flags = R_IO_RWX;
+}
+
+static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
+	ut8 buf[16];
+	ut64 src, dst;
+	ut32 len;
+	if (!gb->screen.dma.remaining_cycles) {
+		return;
+	}
+	dst = (640 - gb->screen.dma.remaining_cycles) >> 2;
+	gb->screen.dma.remaining_cycles -= R_MIN (gb->screen.dma.remaining_cycles, cycles);
+	len = ((640 - gb->screen.dma.remaining_cycles) >> 2) - dst;
+	src = gb->screen.dma.src + dst;
+	r_io_read_at (io, src, buf, len);
+	r_io_fd_write_at (io, gb->oam_fd, buf, len);
+	if (!gb->screen.dma.remaining_cycles) {
+		gb_leave_dma (gb, io);
+	}
+}
+
+#if 0
+static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
+	ut8 buf[16];
+	ut32 ccl, len;
+	ut64 src, dst;
+	if (!gb->screen.dma.remaining_cycles) {
+		return;
+	}
+	// rethink this
+	ccl = cycles | gb->screen.dma.mod;
+	gb->screen.dma.mod = ccl & 3;	// mod 4 bc we use cpu cycles
+	ccl &= ~3;
+	if (ccl > gb->screen.dma.remaining_cycles) {
+		ccl = gb->screen.dma.remaining_cycles;
+	}
+	dst = (640 - gb->screen.dma.remaining_cycles) >> 2;
+	src = gb->screen.dma.src + dst;
+	len = ccl >> 2;
+	r_io_read_at (io, src, buf, len);
+	r_io_fd_write_at (io, gb->oam_fd, dst, buf, len);
+	gb->screen.dma.remaining_cycles -= ccl;
+	if (!gb->screen.dma.remaining_cycles) {
+		gb_leave_dma (gb, io);
+	}
+}
+#endif
+
 static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	GBSeek *gbs;
 	ut32 elen, ret;		//length to read
@@ -184,8 +253,8 @@ static int __gb_screen_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	for (ret = 0; ret < elen; ret++) {
 		switch (gbs->off) {
 		case 0x06:		//dma
-			gbs->gb->screen.dma = buf[ret];
-			gbs->gb_enter_dma (gbs->gb);
+			gbs->gb->screen.dma.reg = buf[ret];
+			gbs->gb_enter_dma (gbs->gb, io);
 			break;
 			//TODO
 		}
@@ -310,6 +379,7 @@ static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
 
 	gb_proceed_div (gb->timers, op->cycles);
 	gb_proceed_tima (gb, op->cycles);
+	gb_proceed_dma (gb, emu->io, op->cycles);
 
 	switch (op->type) {
 	case R_ANAL_OP_TYPE_CRET:	//I'm a condret :)
@@ -338,6 +408,7 @@ static bool gb_post_loop (REmu *emu) {
 		r_emu_th_lock_unlock (&gb->sleeper->lock);
 		gb_proceed_div (gb->timers, gb->not_match_sleep);
 		gb_proceed_tima (gb, gb->not_match_sleep);
+		gb_proceed_dma (gb, emu->io, gb->not_match_sleep);
 	}
 	gb->sleep = 0;
 	gb->not_match_sleep = 0;
