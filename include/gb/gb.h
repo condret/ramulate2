@@ -36,6 +36,19 @@ typedef struct gameboy_memory_mapped_dma_t {
 	ut16 remaining_cycles;
 } GBDMA;
 
+typedef struct gb_oam_entry_t {
+	ut8 x;
+	ut8 y;
+	ut8 nr;
+	ut8 flags;
+} __attribute__((packed)) GBOamEntry;
+
+typedef struct gb_ppu_t {
+	GBOamEntry sprites[10];
+	ut8 idx;
+	ut8 remaining_cycles;
+} GBPPU;
+
 typedef struct gameboy_memory_mapped_screen_t {
 	ut8 lcdc;	//ff40
 	ut8 stat;	//ff41
@@ -73,6 +86,7 @@ typedef struct gameboy_t {
 //or we use the r_io_fd api, since the io-fd is still accessible, when the map is not
 	int oam_fd;
 	ut32 oam_map_id;
+	GBPPU ppu;
 	int timers_fd;
 	ut32 timers_map_id;
 	int screen_fd;

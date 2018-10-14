@@ -149,6 +149,31 @@ RIOPlugin r_io_wild_gb_timers_plugin {
 	.check = __gb_timers_check,
 };
 
+static void gb_lock_oam(Gameboy *gb, RIO *io) {
+	RIOMap *oam_map;
+	gb->oam_lock++;
+	if (gb->oam_lock == 1) {
+		return;
+	}
+
+	//this locks oam access from r_io_read_at and r_io_write_at
+	oam_map = r_io_map_resolve (io, gb->oam_map_id);
+	oam_map->flags = 0;
+}
+
+static void gb_unlock_oam(Gameboy *gb, RIO *io) {
+	RIOMap *oam_map;
+	switch (gb->oam_lock) {
+	case 0:
+		break;
+	case 1:
+		oam_map = r_io_map_resolve (io, gb->oam_map_id);
+		oam_map->flags = R_IO_RWX;
+	default:
+		gb->oam_lock--;
+	}
+}
+
 static void gb_enter_dma(Gameboy *gb, RIO *io) {
 	if (gb->screen.dma.remaining_cycles) {	//not sure if reentering is possible
 		return;
@@ -156,10 +181,7 @@ static void gb_enter_dma(Gameboy *gb, RIO *io) {
 
 	gb->screen.dma.remaining_cycles = 640;	//160 * 4
 	gb->screen.dma.src = gb->screen.dma.reg << 8;
-
-	//this locks oam access from r_io_read_at and r_io_write_at
-	RIOMap *oam_map = r_io_map_resolve (io, gb->oam_map_id);
-	oam_map->flags = 0;
+	gb_lock_oam (gb, io);
 }
 
 static void gb_leave_dma(Gameboy *gb, RIO *io) {
@@ -168,9 +190,7 @@ static void gb_leave_dma(Gameboy *gb, RIO *io) {
 	}
 
 	gb->screen.dma.src = 0;
-
-	RIOMap *oam_map = r_io_map_resolve (io, gb->oam_map_id);
-	oam_map->flags = R_IO_RWX;
+	gb_unlock_oam (gb, io);
 }
 
 static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
@@ -188,6 +208,41 @@ static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
 	r_io_fd_write_at (io, gb->oam_fd, buf, len);
 	if (!gb->screen.dma.remaining_cycles) {
 		gb_leave_dma (gb, io);
+	}
+}
+
+//read 160 bytes in 80 cpu-cycles -> 2 bytes per cycle
+static void gb_proceed_oam_search(Gameboy *gb, RIO *io, ut32 cycles) {
+	ut64 off;
+	ut16 *in;
+	if (!gb->ppu.remaining_cycles) {
+		return;
+	}
+	cycles = R_MIN (gb->ppu.remaining_cycles, cycles);
+	in = (ut16 *)gb->ppu.sprites;
+	off = (80 - gb->ppu->remaining_cycles) << 1;
+	const ut8 height = 8 + ((gb->screen.lcdc & 4) << 1);
+	while (cycles) {
+		if (gb->ppu.idx == 20) {
+			break;
+		}
+		r_io_fd_read_at (io, gb->oam_fd, off, &in[gb->ppu.idx], 2);
+		gb->ppu.idx++;
+		if (!(gb->ppu.idx & 1)) {
+			const s = (gb->ppu.idx >> 1) - 1;
+			//check if sprite is in the line
+			if (!((gb->ppu.sprites[s].x) &&
+				(gb->ppu.sprites[s].y <= (gb->screen.ly + 16)) &&
+				((gb->ppu.sprites[s].y + height) > gb->screen.ly))) {
+				gb->ppu.idx = s << 1;	//sprite is not relevant, so skip it
+			}
+		}
+		off += 2;
+		cycles--;
+		gb->ppu.remaining_cycles--;
+	}
+	if (!(gb->ppu.remaining_cycles -= cycles)) {
+		//gb_leave_oam_search(gb, io);
 	}
 }
 
