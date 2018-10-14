@@ -231,6 +231,12 @@ static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	elen = R_MIN (len, 12) - gbs->off;
 	for (ret = 0; ret < elen; ret++) {
 		switch (gbs->off) {
+		case 0x00:		//lcd controll
+			buf[ret] = gbs->gb->screen.lcdc;
+			break;.
+		case 0x01:		//lcd status
+			buf[ret] = gbs->gb->screen.stat;
+			break;
 		case 0x02:		//scy
 			buf[ret] = gbs->gb->screen.scy;
 			break;
@@ -242,6 +248,22 @@ static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 			break;
 		case 0x05:
 			buf[ret] = gbs->gb->screen.lyc;
+			break;
+		//case 0x06:		//dma copy is write only, what to do here?
+		case 0x07:		//background palette
+			buf[ret] = gbs->gb->screen.bgp;
+			break;
+		case 0x08:		//object palette 0
+			buf[ret] = gbs->gb->screen.obp0;
+			break;
+		case 0x09:		//object palette 1
+			buf[ret] = gbs->gb->screen.obp1;
+			break;
+		case 0x0a:		//window y-position
+			buf[ret] = gbs.gb->screen.wy;
+			break;
+		case 0x0b:		//window x-position
+			buf[ret] = gbs.gb->screen.wx;
 			break;
 			//TODO
 		}
@@ -264,6 +286,13 @@ static int __gb_screen_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	elen = R_MIN (len, 12) - gbs->off;
 	for (ret = 0; ret < elen; ret++) {
 		switch (gbs->off) {
+		case 0x00:		//lcd control
+			gbs->gb->screen.lcdc = buf[ret];
+			break;
+		case 0x01:		//lcd status
+			gbs->gb->screen.stat = buf[ret] & 0xfc;
+			// bit 0 and 1 are read only
+			break;
 		case 0x02:		//scy
 			gbs->gb->screen.scy = bur[ret];
 			break;
@@ -276,6 +305,21 @@ static int __gb_screen_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 		case 0x06:		//dma
 			gbs->gb->screen.dma.reg = buf[ret];
 			gbs->gb_enter_dma (gbs->gb, io);
+			break;
+		case 0x07:		//background palette
+			gbs->gb->screen.bgp = buf[ret];
+			break;
+		case 0x08:		//object palette 0
+			gbs->gb->screen.obp0 = buf[ret];
+			break;
+		case 0x09:		//object palette 1
+			gbs->gb->screen.obp1 = buf[ret]; 
+			break;
+		case 0x0a:		//window y-position
+			gbs.gb->screen.wy = buf[ret];
+			break;
+		case 0x0b:		//window x-position
+			gbs.gb->screen.wx = buf[ret];
 			break;
 			//TODO
 		}
@@ -338,7 +382,6 @@ static void *gb_init (REmu *emu) {
 	sprintf (gbstrbuf, "gb_screen://%p", gb);
 	gb->screen_fd = r_io_desc_open_plugin(emu->io, &r_io_wild_gb_screen_plugin, gbstrbuf, R_IO_RWX, 0644)->fd;
 	gb->screen_map_id = r_io_map_add (emu->io, gb->screen_fd, R_IO_RWX, 0LL, 0xff40, 12);
-#endif
 	gb->if_fd = r_io_fd_open (emu->io, "malloc://1", R_IO_RWX, 0644);
 	r_io_map_add (emu->io, gb->if_fd, R_IO_RWX, 0LL, 0xff0f, 1);
 	gb->ie_fd = r_io_fd_open (emu->io, "malloc://1", R_IO_RWX, 0644);
