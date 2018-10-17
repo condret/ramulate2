@@ -211,6 +211,23 @@ static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
 	}
 }
 
+static void gb_enter_oam_search(Gameboy *gb, RIO *io) {
+	if ((gb->screen.stat & 3) != 0x1) {	//check if entering from vblank
+		return;
+	}
+	gb->ppu.remaining_cycles = 80;
+	gb->ppu.idx = 0;
+	gb->screen.stat &= 0xfc;
+	gb->screen.stat |= 0x02;
+	gb_lock_oam (gb, io);
+}
+
+static void gb_leave_oam_search(Gameboy *gb, RIO *io) {
+	if ((gb->screen.stat & 3) == 2) {	//check if leaving oam-search
+		gb_unlock_oam (gb, io);
+	}
+}
+
 //read 160 bytes in 80 cpu-cycles -> 2 bytes per cycle
 static void gb_proceed_oam_search(Gameboy *gb, RIO *io, ut32 cycles) {
 	ut64 off;
@@ -304,7 +321,9 @@ static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 		case 0x05:
 			buf[ret] = gbs->gb->screen.lyc;
 			break;
-		//case 0x06:		//dma copy is write only, what to do here?
+		case 0x06:		//pandocs lie about this, this is not write-only
+			buf[ret] = gbs->gb->screen.dma.reg;
+			break;
 		case 0x07:		//background palette
 			buf[ret] = gbs->gb->screen.bgp;
 			break;
@@ -441,6 +460,8 @@ static void *gb_init (REmu *emu) {
 	r_io_map_add (emu->io, gb->if_fd, R_IO_RWX, 0LL, 0xff0f, 1);
 	gb->ie_fd = r_io_fd_open (emu->io, "malloc://1", R_IO_RWX, 0644);
 	r_io_map_add (emu->io, gb->ie_fd, R_IO_RWX, 0LL, 0xffff, 1);
+
+	gb->screen.dma.reg = 0xff;
 
 	return gb;
 }
