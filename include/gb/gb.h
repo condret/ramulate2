@@ -4,6 +4,16 @@
 #include <r_th.h>
 #include <r_io.h>
 
+#define	GB_LCD_STAT_MODE_MASK	3
+
+enum {
+	GB_LCD_STAT_MODE_HBLANK = 0,
+	GB_LCD_STAT_MODE_VBLANK,
+	GB_LCD_STAT_MODE_OAM_SEARCH,
+	GB_LCD_STAT_MODE_PIXEL_TRANSFERE,
+};
+
+
 //pass this to an io-plugin, then map it to 0xff00
 //each register needs a set-fcn in the io-plugin which can trigger certain events
 typedef struct gameboy_memory_mapped_serial_transfere_t {

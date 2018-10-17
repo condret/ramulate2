@@ -212,18 +212,18 @@ static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
 }
 
 static void gb_enter_oam_search(Gameboy *gb, RIO *io) {
-	if ((gb->screen.stat & 3) != 0x1) {	//check if entering from vblank
+	if ((gb->screen.stat & GB_LCD_STAT_MODE_MASK) != GB_LCD_STAT_MODE_VBLANK) {	//check if entering from vblank
 		return;
 	}
 	gb->ppu.remaining_cycles = 80;
 	gb->ppu.idx = 0;
-	gb->screen.stat &= 0xfc;
-	gb->screen.stat |= 0x02;
+	gb->screen.stat &= ~GB_LCD_STAT_MODE_MASK;
+	gb->screen.stat |= GB_LCD_STAT_MODE_OAM_SEARCH;
 	gb_lock_oam (gb, io);
 }
 
 static void gb_leave_oam_search(Gameboy *gb, RIO *io) {
-	if ((gb->screen.stat & 3) == 2) {	//check if leaving oam-search
+	if ((gb->screen.stat & GB_LCD_STAT_MODE_MASK) == GB_LCD_STAT_MODE_OAM_SEARCH) {	//check if leaving oam-search
 		gb_unlock_oam (gb, io);
 	}
 }
