@@ -290,7 +290,17 @@ static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
 }
 #endif
 
-static ut32 gb_mix_8_pixels (ut32 in, ut32 mix_in) {
+static void gb_lock_vram(Gameboy *gb, RIO *io) {
+	RIOMap *vram_map = r_io_map_resolve(io, gb->vram_map_id);
+	vram_map->flags = 0;
+}
+
+static void gb_unlock_vram(Gameboy *gb, RIO *io) {
+	RIOMap *vram_map = r_io_map_resolve(io, gb->vram_map_id);
+	vram_map->flags = R_IO_RWX;
+}
+
+static ut32 gb_mix_8_pixels(ut32 in, ut32 mix_in) {
 	ut32 i, mix = 0;
 	ut8 pixel;
 
