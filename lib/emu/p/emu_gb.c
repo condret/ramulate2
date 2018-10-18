@@ -212,7 +212,8 @@ static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
 }
 
 static void gb_enter_oam_search(Gameboy *gb, RIO *io) {
-	if ((gb->screen.stat & GB_LCD_STAT_MODE_MASK) != GB_LCD_STAT_MODE_VBLANK) {	//check if entering from vblank
+	ut8 mode = gb->screen.stat & GB_LCD_STAT_MODE_MASK;
+	if ((mode != GB_LCD_STAT_MODE_VBLANK) && (mode != GB_LCD_STAT_MODE_HBLANK)) {	//check if entering from vblank or hblank
 		return;
 	}
 	gb->ppu.remaining_cycles = 80;
