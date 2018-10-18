@@ -290,6 +290,26 @@ static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
 }
 #endif
 
+static ut32 gb_mix_8_pixels (ut32 in, ut32 mix_in) {
+	ut32 i, mix = 0;
+	ut8 pixel;
+
+	for (i = 0; i < 8; i++) {
+		mix >>= 4;
+//	|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|
+		pixel = in & 0x0f;
+		if (!(pixel & 0x0c)) {		//check if pixel is not a sprite
+			if (mix_in & 0x03) {	//check if mix_in_pixel is not background
+				pixel = mix_in & 0x0f;
+			}
+		}
+		mix |= pixel << 28;
+		in >>= 4;
+		mix_in >>= 4;
+	}
+	return mix;
+}
+
 static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	GBSeek *gbs;
 	ut32 elen, ret;		//length to read
