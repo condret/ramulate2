@@ -179,7 +179,7 @@ static void gb_enter_dma(Gameboy *gb, RIO *io) {
 		return;
 	}
 
-	gb->screen.dma.remaining_cycles = 640;	//160 * 4
+	gb->screen.dma.remaining_cycles = GB_DMA_COPY_CPU_CYCLES;
 	gb->screen.dma.src = gb->screen.dma.reg << 8;
 	gb_lock_oam (gb, io);
 }
@@ -200,9 +200,9 @@ static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
 	if (!gb->screen.dma.remaining_cycles) {
 		return;
 	}
-	dst = (640 - gb->screen.dma.remaining_cycles) >> 2;
+	dst = (GB_DMA_COPY_CPU_CYCLES - gb->screen.dma.remaining_cycles) >> 2;
 	gb->screen.dma.remaining_cycles -= R_MIN (gb->screen.dma.remaining_cycles, cycles);
-	len = ((640 - gb->screen.dma.remaining_cycles) >> 2) - dst;
+	len = ((GB_DMA_COPY_CPU_CYCLES - gb->screen.dma.remaining_cycles) >> 2) - dst;
 	src = gb->screen.dma.src + dst;
 	r_io_read_at (io, src, buf, len);
 	r_io_fd_write_at (io, gb->oam_fd, buf, len);
@@ -216,7 +216,7 @@ static void gb_enter_oam_search(Gameboy *gb, RIO *io) {
 	if ((mode != GB_LCD_STAT_MODE_VBLANK) && (mode != GB_LCD_STAT_MODE_HBLANK)) {	//check if entering from vblank or hblank
 		return;
 	}
-	gb->ppu.remaining_cycles = 80;
+	gb->ppu.remaining_cycles = GB_OAM_SEARCH_CPU_CYCLES;
 	gb->ppu.idx = 0;
 	gb->screen.stat &= ~GB_LCD_STAT_MODE_MASK;
 	gb->screen.stat |= GB_LCD_STAT_MODE_OAM_SEARCH;
@@ -238,7 +238,7 @@ static void gb_proceed_oam_search(Gameboy *gb, RIO *io, ut32 cycles) {
 	}
 	cycles = R_MIN (gb->ppu.remaining_cycles, cycles);
 	in = (ut16 *)gb->ppu.sprites;
-	off = (80 - gb->ppu->remaining_cycles) << 1;
+	off = (GB_OAM_SEARCH_CPU_CYCLES - gb->ppu->remaining_cycles) << 1;
 	const ut8 height = 8 + ((gb->screen.lcdc & 4) << 1);
 	while (cycles) {
 		if (gb->ppu.idx == 20) {
@@ -260,7 +260,7 @@ static void gb_proceed_oam_search(Gameboy *gb, RIO *io, ut32 cycles) {
 		gb->ppu.remaining_cycles--;
 	}
 	if (!(gb->ppu.remaining_cycles -= cycles)) {
-		//gb_leave_oam_search(gb, io);
+		gb_leave_oam_search(gb, io);
 	}
 }
 

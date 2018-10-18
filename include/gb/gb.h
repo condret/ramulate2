@@ -39,12 +39,16 @@ typedef struct gameboy_memory_mapped_sound_t {
 	ut8 wav[16];	//0020 : ff30 - ff3f
 } GBMMSND;
 
+#define GB_DMA_COPY_CPU_CYCLES	(160 * 4)	
+
 typedef struct gameboy_memory_mapped_dma_t {
 	ut8 reg;
 	ut16 src;
 //	ut8 mod;
 	ut16 remaining_cycles;
 } GBDMA;
+
+#define	GB_OAM_SEARCH_CPU_CYCLES	(20 * 4)
 
 typedef struct gb_oam_entry_t {
 	ut8 x;
