@@ -57,10 +57,16 @@ typedef struct gb_oam_entry_t {
 	ut8 flags;
 } __attribute__((packed)) GBOamEntry;
 
+typedef struct gb_pixel_fifo_t {
+	ut64 pixels;		//pixels in the fifo
+	ut32 contained;		//number of pixels in the fifo
+} GBPixelFifo;
+
 typedef struct gb_ppu_t {
 	GBOamEntry sprites[10];
 	ut8 idx;
 	ut8 remaining_cycles;
+	GBPixelFifo fifo;
 } GBPPU;
 
 typedef struct gameboy_memory_mapped_screen_t {
