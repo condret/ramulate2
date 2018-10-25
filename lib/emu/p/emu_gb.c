@@ -260,8 +260,20 @@ static void gb_proceed_oam_search(Gameboy *gb, RIO *io, ut32 cycles) {
 		gb->ppu.remaining_cycles--;
 	}
 	if (!(gb->ppu.remaining_cycles -= cycles)) {
+		gb->ppu.idx >>= 1;
 		gb_leave_oam_search(gb, io);
 	}
+}
+
+static GBOamEntry *gb_get_next_oam_ptr (Gameboy *gb, ut32 *ctr, ut16 y) {
+	while (ctr[0] < gb->ppu.idx) {
+		const idx = ctr[0];
+		ctr[0]++;
+		if (gb->ppu.sprites[idx].y == y) {
+			return &gb->ppu.sprites[idx];
+		}
+	}
+	return NULL;
 }
 
 #if 0
@@ -308,6 +320,7 @@ static ut32 gb_mix_8_pixels(ut32 in, ut32 mix_in) {
 	for (i = 0; i < 8; i++) {
 		mix >>= 4;
 //	|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|
+// Fix this
 		pixel = in & 0x0f;
 		if (!(pixel & 0x0c)) {		//check if pixel is not a sprite
 			if (mix_in & 0x03) {	//check if mix_in_pixel is not background
