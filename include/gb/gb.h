@@ -60,13 +60,40 @@ typedef struct gb_oam_entry_t {
 typedef struct gb_pixel_fifo_t {
 	ut64 pixels;		//pixels in the fifo
 	ut32 contained;		//number of pixels in the fifo
+	bool stop;
 } GBPixelFifo;
+
+enum {
+	GB_FETCHER_TILE_NR = 0,	//get tilenr
+	GB_FETCHER_PART_1,	//first part of line
+	GB_FETCHER_PART_2,	//second part of line
+	GB_FETCHER_TO_OUT,	//expand to out
+//this fits neatly into 3 bit so
+	GB_FETCHER_CHECK_OAM_ONLY,
+	//check oam on each call,
+	//don't do anything else when this is set
+};
+
+typedef struct gb_pixel_fetcher_t {
+	ut8 status;	//saves what the fetcher is doing atm
+	// for reading from background or window
+	ut8 tile_nr;
+	ut8 first;
+	ut8 second;
+	ut32 out;
+#if 0
+	// sprite stuff
+	ut32 ctr;
+	GBOamEntry *sprite;
+#endif
+} GBPixelFetcher;
 
 typedef struct gb_ppu_t {
 	GBOamEntry sprites[10];
 	ut8 idx;
-	ut8 remaining_cycles;
+	ut8 remaining_cycles;	//for oam search;
 	GBPixelFifo fifo;
+	GBPixelFetcher fetcher;
 } GBPPU;
 
 typedef struct gameboy_memory_mapped_screen_t {

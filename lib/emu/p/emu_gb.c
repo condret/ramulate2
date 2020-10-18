@@ -313,17 +313,30 @@ static void gb_unlock_vram(Gameboy *gb, RIO *io) {
 	vram_map->flags = R_IO_RWX;
 }
 
+/*
+input format:
+- in and mix_in each contain pixel data for 8 pixels
+	- a pixel takes 4 bit
+	- |P|p|c|c|
+		P: priority
+		p: palette
+		c: color
+
+output format is the same
+*/
+
 static ut32 gb_mix_8_pixels(ut32 in, ut32 mix_in) {
 	ut32 i, mix = 0;
 	ut8 pixel;
 
 	for (i = 0; i < 8; i++) {
 		mix >>= 4;
-//	|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|ss|cc|
-// Fix this
 		pixel = in & 0x0f;
-		if (!(pixel & 0x0c)) {		//check if pixel is not a sprite
-			if (mix_in & 0x03) {	//check if mix_in_pixel is not background
+		if (!(pixel & 0x08)) {
+		//check if pixel has sprite priority
+			if ((mix_in & 0x03) && (mix_in & 0x08)) {
+			//check if mix_in_pixel is not translucent and not background
+			//this handles priority like cgb
 				pixel = mix_in & 0x0f;
 			}
 		}
@@ -333,6 +346,32 @@ static ut32 gb_mix_8_pixels(ut32 in, ut32 mix_in) {
 	}
 	return mix;
 }
+
+static ut64 gb_get_bg_base (GBMMSCR *screen) {
+	return (screen->lcdc & 0x8) ? 0x9c00 : 0x9800;
+}
+
+static void gb_fetcher_continue (Gameboy *gb. RIO *io) {
+	GBOamEntry *sprite;
+	GBPixelFetcher *fetcher = &gb->ppu.fetcher;
+	ut32 ctr;
+	if (fetcher->status & GB_FETCHER_CHECK_OAM_ONLY) {
+		//check for oam_stuff here
+		fetcher->status &= 3;
+		return;
+	}
+	//do stuff here
+	switch (fetcher->status) {
+	case GB_FETCHER_TILE_NR:
+	case GB_FETCHER_PART_1:
+	case GB_FETCHER_PART_2:
+	case GB_FETCHER_TO_OUT:
+	}
+	fetcher->status++;
+	fetcher->status &= 3;
+	fetcher->status |= GB_FETCHER_CHECK_OAM_ONLY;
+}
+	
 
 static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	GBSeek *gbs;
