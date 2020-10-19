@@ -25,7 +25,7 @@ R_API void *r_emu_plugin_init(REmuPlugin *p, REmu *emu) {
 	if (!emu || !p || !(p->init && p->fini)) {
 		return NULL;
 	}
-	return p->init(emu);
+	return p->init (emu);
 }
 
 R_API void r_emu_plugin_fini(REmuPlugin *p, void *user) {

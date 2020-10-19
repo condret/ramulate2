@@ -29,7 +29,7 @@ R_API bool r_emu_load(REmu *emu, char *arch) {
 	if (!emu->plugin) {
 		return false;
 	}
-	emu->user = r_emu_plugin_init(emu);
+	emu->user = r_emu_plugin_init (emu);
 	return true;
 }
 
@@ -41,11 +41,11 @@ R_API void r_emu_unload(REmu *emu) {
 	}
 }
 
-R_API void r_emu_free (REmu *emu) {
+R_API void r_emu_free(REmu *emu) {
 	if (!emu) {
 		return;
 	}
-	r_emu_unload(emu);
+	r_emu_unload (emu);
 	r_io_free (emu->io);
 	r_anal_free (emu->anal);
 	free (emu);

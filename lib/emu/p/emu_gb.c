@@ -8,13 +8,12 @@
 #include <gb/gb.h>
 #include <stdbool.h>
 
-#ifndef	R_IO_RWX
-#define	R_IO_RWX	R_IO_RW | R_IO_EXEC
+#ifndef R_IO_RWX
+#define R_IO_RWX R_IO_RW | R_IO_EXEC
 #endif
-#ifndef	R_IO_RX
-#define	R_IO_RX		R_IO_READ | R_IO_EXEC
+#ifndef R_IO_RX
+#define R_IO_RX R_IO_READ | R_IO_EXEC
 #endif
-
 
 typedef struct gameboy_seek_t {
 	Gameboy *gb;
@@ -23,9 +22,9 @@ typedef struct gameboy_seek_t {
 
 char gbstrbuf[128];
 
-static RIODesc *__gb_timers_open (RIO *io, const char *path, int rwx, int mode) {
+static RIODesc *__gb_timers_open(RIO *io, const char *path, int rwx, int mode) {
 	RIODesc *desc;
-	GBSeek *gbseek = R_NEW0(GBSeek);
+	GBSeek *gbseek = R_NEW0 (GBSeek);
 	if (!gbseek) {
 		return NULL;
 	}
@@ -43,36 +42,36 @@ static RIODesc *__gb_timers_open (RIO *io, const char *path, int rwx, int mode) 
 	return desc;
 }
 
-static int __gb_timers_close (RIODesc *desc) {
+static int __gb_timers_close(RIODesc *desc) {
 	if (desc) {
 		free (desc->data);
 	}
 	return 0;
 }
 
-static int __gb_timers_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
+static int __gb_timers_read(RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	GBSeek *gbs;
-	ut32 elen, ret;		//length to read
+	ut32 elen, ret; //length to read
 	if (!(desc && desc->data && buf && len)) {
 		return 0;
 	}
 	gbs = (GBSeek *)desc->data;
-	if (gbs->off > 3) {	//out of file
+	if (gbs->off > 3) { //out of file
 		return 0;
 	}
 	elen = R_MIN (len, 4) - gbs->off;
 	for (ret = 0; ret < elen; ret++) {
 		switch (gbs->off) {
-		case 0:		//div
-			buf[ret] = gb_get_div(gbs->gb->timers);
+		case 0: //div
+			buf[ret] = gb_get_div (gbs->gb->timers);
 			break;
-		case 1:		//tima
-			buf[ret] = gb_get_tima(gbs->gb->timers);
+		case 1: //tima
+			buf[ret] = gb_get_tima (gbs->gb->timers);
 			break;
-		case 2:		//tma
+		case 2: //tma
 			buf[ret] = gbs->gb->timers.tma;
 			break;
-		case 3:		//tac
+		case 3: //tac
 			buf[ret] = gbs->gb->timers.tac;
 			break;
 		}
@@ -82,28 +81,28 @@ static int __gb_timers_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	return ret;
 }
 
-static int __gb_timers_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
+static int __gb_timers_write(RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	GBSeek *gbs;
-	ut32 elen, ret;		//length to read
+	ut32 elen, ret; //length to read
 	if (!(desc && desc->data && buf && len)) {
 		return 0;
 	}
 	gbs = (GBSeek *)desc->data;
-	if (gbs->off > 3) {	//out of file
+	if (gbs->off > 3) { //out of file
 		return 0;
 	}
 	elen = R_MIN (len, 4) - gbs->off;
 	for (ret = 0; ret < elen; ret++) {
 		switch (gbs->off) {
-		case 0:		//div
+		case 0: //div
 			gbs->gb->timers.div = 0;
 			break;
-		case 3:		//tac
+		case 3: //tac
 			gbs->gb->timers.tac = buf[ret] & 7;
-		case 1:		//tima
-			gbs->gb->timers.tima = 0;	//is this correct?
+		case 1: //tima
+			gbs->gb->timers.tima = 0; //is this correct?
 			break;
-		case 2:		//tma
+		case 2: //tma
 			gbs->gb->timers.tma = buf[ret];
 			break;
 		}
@@ -113,7 +112,7 @@ static int __gb_timers_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	return ret;
 }
 
-static ut64 __gb_timers_lseek (RIO *io, RIODesc *desc, ut64 off, int whence) {
+static ut64 __gb_timers_lseek(RIO *io, RIODesc *desc, ut64 off, int whence) {
 	GBSeek *gbs;
 	if (!(desc && desc->data)) {
 		return 0LL;
@@ -133,11 +132,11 @@ static ut64 __gb_timers_lseek (RIO *io, RIODesc *desc, ut64 off, int whence) {
 	return gbs->off;
 }
 
-static bool __gb_timers_check (RIO *io, const char *path, bool many) {
-	return path && (strstr(path, "gb_timers://") == path);
+static bool __gb_timers_check(RIO *io, const char *path, bool many) {
+	return path && (strstr (path, "gb_timers://") == path);
 }
 
-RIOPlugin r_io_wild_gb_timers_plugin {
+RIOPlugin r_io_wild_gb_timers_plugin{
 	.name = "gb_timers",
 	.desc = "Represent GB-Timers",
 	.license = "LGPL3",
@@ -175,7 +174,7 @@ static void gb_unlock_oam(Gameboy *gb, RIO *io) {
 }
 
 static void gb_enter_dma(Gameboy *gb, RIO *io) {
-	if (gb->screen.dma.remaining_cycles) {	//not sure if reentering is possible
+	if (gb->screen.dma.remaining_cycles) { //not sure if reentering is possible
 		return;
 	}
 
@@ -185,7 +184,7 @@ static void gb_enter_dma(Gameboy *gb, RIO *io) {
 }
 
 static void gb_leave_dma(Gameboy *gb, RIO *io) {
-	if (gb->screen.dma.remaining_cycles) {	//not finished
+	if (gb->screen.dma.remaining_cycles) { //not finished
 		return;
 	}
 
@@ -213,7 +212,7 @@ static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
 
 static void gb_enter_oam_search(Gameboy *gb, RIO *io) {
 	ut8 mode = gb->screen.stat & GB_LCD_STAT_MODE_MASK;
-	if ((mode != GB_LCD_STAT_MODE_VBLANK) && (mode != GB_LCD_STAT_MODE_HBLANK)) {	//check if entering from vblank or hblank
+	if ((mode != GB_LCD_STAT_MODE_VBLANK) && (mode != GB_LCD_STAT_MODE_HBLANK)) { //check if entering from vblank or hblank
 		return;
 	}
 	gb->ppu.remaining_cycles = GB_OAM_SEARCH_CPU_CYCLES;
@@ -224,7 +223,7 @@ static void gb_enter_oam_search(Gameboy *gb, RIO *io) {
 }
 
 static void gb_leave_oam_search(Gameboy *gb, RIO *io) {
-	if ((gb->screen.stat & GB_LCD_STAT_MODE_MASK) == GB_LCD_STAT_MODE_OAM_SEARCH) {	//check if leaving oam-search
+	if ((gb->screen.stat & GB_LCD_STAT_MODE_MASK) == GB_LCD_STAT_MODE_OAM_SEARCH) { //check if leaving oam-search
 		gb_unlock_oam (gb, io);
 	}
 }
@@ -250,9 +249,9 @@ static void gb_proceed_oam_search(Gameboy *gb, RIO *io, ut32 cycles) {
 			const s = (gb->ppu.idx >> 1) - 1;
 			//check if sprite is in the line
 			if (!((gb->ppu.sprites[s].x) &&
-				(gb->ppu.sprites[s].y <= (gb->screen.ly + 16)) &&
-				((gb->ppu.sprites[s].y + height) > gb->screen.ly))) {
-				gb->ppu.idx = s << 1;	//sprite is not relevant, so skip it
+				    (gb->ppu.sprites[s].y <= (gb->screen.ly + 16)) &&
+				    ((gb->ppu.sprites[s].y + height) > gb->screen.ly))) {
+				gb->ppu.idx = s << 1; //sprite is not relevant, so skip it
 			}
 		}
 		off += 2;
@@ -261,11 +260,11 @@ static void gb_proceed_oam_search(Gameboy *gb, RIO *io, ut32 cycles) {
 	}
 	if (!(gb->ppu.remaining_cycles -= cycles)) {
 		gb->ppu.idx >>= 1;
-		gb_leave_oam_search(gb, io);
+		gb_leave_oam_search (gb, io);
 	}
 }
 
-static GBOamEntry *gb_get_next_oam_ptr (Gameboy *gb, ut32 *ctr, ut16 y) {
+static GBOamEntry *gb_get_next_oam_ptr(Gameboy *gb, ut32 *ctr, ut16 y) {
 	while (ctr[0] < gb->ppu.idx) {
 		const idx = ctr[0];
 		ctr[0]++;
@@ -304,12 +303,12 @@ static void gb_proceed_dma(Gameboy *gb, RIO *io, ut32 cycles) {
 #endif
 
 static void gb_lock_vram(Gameboy *gb, RIO *io) {
-	RIOMap *vram_map = r_io_map_resolve(io, gb->vram_map_id);
+	RIOMap *vram_map = r_io_map_resolve (io, gb->vram_map_id);
 	vram_map->flags = 0;
 }
 
 static void gb_unlock_vram(Gameboy *gb, RIO *io) {
-	RIOMap *vram_map = r_io_map_resolve(io, gb->vram_map_id);
+	RIOMap *vram_map = r_io_map_resolve (io, gb->vram_map_id);
 	vram_map->flags = R_IO_RWX;
 }
 
@@ -333,10 +332,10 @@ static ut32 gb_mix_8_pixels(ut32 in, ut32 mix_in) {
 		mix >>= 4;
 		pixel = in & 0x0f;
 		if (!(pixel & 0x08)) {
-		//check if pixel has sprite priority
+			//check if pixel has sprite priority
 			if ((mix_in & 0x03) && (mix_in & 0x08)) {
-			//check if mix_in_pixel is not translucent and not background
-			//this handles priority like cgb
+				//check if mix_in_pixel is not translucent and not background
+				//this handles priority like cgb
 				pixel = mix_in & 0x0f;
 			}
 		}
@@ -347,11 +346,11 @@ static ut32 gb_mix_8_pixels(ut32 in, ut32 mix_in) {
 	return mix;
 }
 
-static ut64 gb_get_bg_base (GBMMSCR *screen) {
+static ut64 gb_get_bg_base(GBMMSCR *screen) {
 	return (screen->lcdc & 0x8) ? 0x9c00 : 0x9800;
 }
 
-static void gb_fetcher_continue (Gameboy *gb. RIO *io) {
+static void gb_fetcher_continue(Gameboy *gb.RIO *io) {
 	GBOamEntry *sprite;
 	GBPixelFetcher *fetcher = &gb->ppu.fetcher;
 	ut32 ctr;
@@ -371,28 +370,27 @@ static void gb_fetcher_continue (Gameboy *gb. RIO *io) {
 	fetcher->status &= 3;
 	fetcher->status |= GB_FETCHER_CHECK_OAM_ONLY;
 }
-	
 
-static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
+static int __gb_screen_read(RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	GBSeek *gbs;
-	ut32 elen, ret;		//length to read
+	ut32 elen, ret; //length to read
 	if (!(desc && desc->data && buf && len)) {
 		return 0;
 	}
 	gbs = (GBSeek *)desc->data;
-	if (gbs->off > 11) {	//out of file
+	if (gbs->off > 11) { //out of file
 		return 0;
 	}
 	elen = R_MIN (len, 12) - gbs->off;
 	for (ret = 0; ret < elen; ret++) {
 		switch (gbs->off) {
-		case 0x00:		//lcd controll
+		case 0x00: //lcd controll
 			buf[ret] = gbs->gb->screen.lcdc;
-			break;.
-		case 0x01:		//lcd status
-			buf[ret] = gbs->gb->screen.stat;
 			break;
-		case 0x02:		//scy
+			.case 0x01 : //lcd status
+				     buf[ret] = gbs->gb->screen.stat;
+			break;
+		case 0x02: //scy
 			buf[ret] = gbs->gb->screen.scy;
 			break;
 		case 0x03:
@@ -404,22 +402,22 @@ static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 		case 0x05:
 			buf[ret] = gbs->gb->screen.lyc;
 			break;
-		case 0x06:		//pandocs lie about this, this is not write-only
+		case 0x06: //pandocs lie about this, this is not write-only
 			buf[ret] = gbs->gb->screen.dma.reg;
 			break;
-		case 0x07:		//background palette
+		case 0x07: //background palette
 			buf[ret] = gbs->gb->screen.bgp;
 			break;
-		case 0x08:		//object palette 0
+		case 0x08: //object palette 0
 			buf[ret] = gbs->gb->screen.obp0;
 			break;
-		case 0x09:		//object palette 1
+		case 0x09: //object palette 1
 			buf[ret] = gbs->gb->screen.obp1;
 			break;
-		case 0x0a:		//window y-position
+		case 0x0a: //window y-position
 			buf[ret] = gbs.gb->screen.wy;
 			break;
-		case 0x0b:		//window x-position
+		case 0x0b: //window x-position
 			buf[ret] = gbs.gb->screen.wx;
 			break;
 			//TODO
@@ -430,27 +428,27 @@ static int __gb_screen_read (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	return ret;
 }
 
-static int __gb_screen_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
+static int __gb_screen_write(RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	GBSeek *gbs;
-	ut32 elen, ret;		//length to read
+	ut32 elen, ret; //length to read
 	if (!(desc && desc->data && buf && len)) {
 		return 0;
 	}
 	gbs = (GBSeek *)desc->data;
-	if (gbs->off > 11) {	//out of file
+	if (gbs->off > 11) { //out of file
 		return 0;
 	}
 	elen = R_MIN (len, 12) - gbs->off;
 	for (ret = 0; ret < elen; ret++) {
 		switch (gbs->off) {
-		case 0x00:		//lcd control
+		case 0x00: //lcd control
 			gbs->gb->screen.lcdc = buf[ret];
 			break;
-		case 0x01:		//lcd status
+		case 0x01: //lcd status
 			gbs->gb->screen.stat = buf[ret] & 0xfc;
 			// bit 0 and 1 are read only
 			break;
-		case 0x02:		//scy
+		case 0x02: //scy
 			gbs->gb->screen.scy = bur[ret];
 			break;
 		case 0x03:
@@ -459,23 +457,23 @@ static int __gb_screen_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 		case 0x05:
 			gbs->gb->screen.lyc = bur[ret];
 			break;
-		case 0x06:		//dma
+		case 0x06: //dma
 			gbs->gb->screen.dma.reg = buf[ret];
 			gbs->gb_enter_dma (gbs->gb, io);
 			break;
-		case 0x07:		//background palette
+		case 0x07: //background palette
 			gbs->gb->screen.bgp = buf[ret];
 			break;
-		case 0x08:		//object palette 0
+		case 0x08: //object palette 0
 			gbs->gb->screen.obp0 = buf[ret];
 			break;
-		case 0x09:		//object palette 1
-			gbs->gb->screen.obp1 = buf[ret]; 
+		case 0x09: //object palette 1
+			gbs->gb->screen.obp1 = buf[ret];
 			break;
-		case 0x0a:		//window y-position
+		case 0x0a: //window y-position
 			gbs.gb->screen.wy = buf[ret];
 			break;
-		case 0x0b:		//window x-position
+		case 0x0b: //window x-position
 			gbs.gb->screen.wx = buf[ret];
 			break;
 			//TODO
@@ -486,7 +484,7 @@ static int __gb_screen_write (RIO *io, RIODesc *desc, ut8 *buf, int len) {
 	return ret;
 }
 
-static ut64 __gb_screen_lseek (RIO *io, RIODesc *desc, ut64 off, int whence) {
+static ut64 __gb_screen_lseek(RIO *io, RIODesc *desc, ut64 off, int whence) {
 	GBSeek *gbs;
 	if (!(desc && desc->data)) {
 		return 0LL;
@@ -506,24 +504,24 @@ static ut64 __gb_screen_lseek (RIO *io, RIODesc *desc, ut64 off, int whence) {
 	return gbs->off;
 }
 
-static bool __gb_screen_check (RIO *io, const char *path, bool many) {
-	return path && (strstr(path, "gb_screen://") == path);
+static bool __gb_screen_check(RIO *io, const char *path, bool many) {
+	return path && (strstr (path, "gb_screen://") == path);
 }
 
-RIOPlugin r_io_wild_gb_screen_plugin {
+RIOPlugin r_io_wild_gb_screen_plugin{
 	.name = "gb_screen",
 	.desc = "Represent GB-Timers",
 	.license = "LGPL3",
-	.open = __gb_timers_open,	//it works in the exact same way
-	.close = __gb_timers_close,	//no need for duplicated functions
+	.open = __gb_timers_open, //it works in the exact same way
+	.close = __gb_timers_close, //no need for duplicated functions
 	.read = __gb_screen_read,
 	.write = __gb_screen_write,
 	.lseek = __gb_screen_lseek,
 	.check = __gb_screen_check,
 };
 
-static void *gb_init (REmu *emu) {
-	Gameboy *gb = R_NEW(Gameboy);
+static void *gb_init(REmu *emu) {
+	Gameboy *gb = R_NEW (Gameboy);
 	if (!gb) {
 		return NULL;
 	}
@@ -534,10 +532,10 @@ static void *gb_init (REmu *emu) {
 	gb->oam_fd = r_io_fd_open (emu->io, "malloc://0xa0", R_IO_RWX, 0644);
 	gb->oam_map_id = r_io_map_add (emu->io, gb->oam_fd, R_IO_RWX, 0LL, 0xfe00);
 	sprintf (gbstrbuf, "gb_timers://%p", gb);
-	gb->timers_fd = r_io_desc_open_plugin(emu->io, &r_io_wild_gb_timers_plugin, gbstrbuf, R_IO_RWX, 0644)->fd;	//well, this might segfault, but E_TOO_LAZY
+	gb->timers_fd = r_io_desc_open_plugin (emu->io, &r_io_wild_gb_timers_plugin, gbstrbuf, R_IO_RWX, 0644)->fd; //well, this might segfault, but E_TOO_LAZY
 	gb->timers_map_id = r_io_map_add (emu->io, gb->timers_fd, R_IO_RWX, 0LL, 0xff04, 4);
 	sprintf (gbstrbuf, "gb_screen://%p", gb);
-	gb->screen_fd = r_io_desc_open_plugin(emu->io, &r_io_wild_gb_screen_plugin, gbstrbuf, R_IO_RWX, 0644)->fd;
+	gb->screen_fd = r_io_desc_open_plugin (emu->io, &r_io_wild_gb_screen_plugin, gbstrbuf, R_IO_RWX, 0644)->fd;
 	gb->screen_map_id = r_io_map_add (emu->io, gb->screen_fd, R_IO_RWX, 0LL, 0xff40, 12);
 	gb->if_fd = r_io_fd_open (emu->io, "malloc://1", R_IO_RWX, 0644);
 	r_io_map_add (emu->io, gb->if_fd, R_IO_RWX, 0LL, 0xff0f, 1);
@@ -549,11 +547,11 @@ static void *gb_init (REmu *emu) {
 	return gb;
 }
 
-static void gb_fini (void *user) {
-	free (user);	//io will cleanup itself :D
+static void gb_fini(void *user) {
+	free (user); //io will cleanup itself :D
 }
 
-static void gb_proceed_tima (Gameboy *gb, ut32 cycles) {
+static void gb_proceed_tima(Gameboy *gb, ut32 cycles) {
 	if (!(gb->timers.tac & 0x4)) {
 		return;
 	}
@@ -575,7 +573,7 @@ static void gb_proceed_tima (Gameboy *gb, ut32 cycles) {
 	}
 }
 
-static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
+static bool gb_pre_loop(REmu *emu, RAnalOp *op, ut8 *bytes) {
 	Gameboy *gb = (Gameboy *)emu->user;
 	if (bytes[0] == 0x10) {
 		r_strbuf_set (op->esil, "STOP");
@@ -592,20 +590,20 @@ static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
 
 	//prepare sleeper for next instruction
 	r_emu_th_lock_lock (&gb->sleeper->lock)
-	gb->sleeper->to_sleep = op->cycles;
+		gb->sleeper->to_sleep = op->cycles;
 	//wait for sleeper to wake up
 	while (!gb->sleeper->sleeping) {
-		r_emu_nop();
+		r_emu_nop ();
 	}
 	//activate sleeper here:
 	r_emu_th_lock_unlock (&gb->sleeper->lock)
 
-	gb_proceed_div (gb->timers, op->cycles);
+		gb_proceed_div (gb->timers, op->cycles);
 	gb_proceed_tima (gb, op->cycles);
 	gb_proceed_dma (gb, emu->io, op->cycles);
 
 	switch (op->type) {
-	case R_ANAL_OP_TYPE_CRET:	//I'm a condret :)
+	case R_ANAL_OP_TYPE_CRET: //I'm a condret :)
 	case R_ANAL_OP_TYPE_CJMP:
 	case R_ANAL_OP_TYPE_UCJMP:
 	case R_ANAL_OP_TYPE_CCALL:
@@ -616,7 +614,7 @@ static bool gb_pre_loop (REmu *emu, RAnalOp *op, ut8 *bytes) {
 	return true;
 }
 
-static bool gb_post_loop (REmu *emu) {
+static bool gb_post_loop(REmu *emu) {
 	Gameboy *gb;
 	ut8 ime, iflags, ieflags, joypad, iv, intr, i;
 	ut16 pc;
@@ -624,7 +622,7 @@ static bool gb_post_loop (REmu *emu) {
 		return false;
 	}
 	gb = (Gameboy *)emu->user;
-	pc = r_reg_getv(emu->anal->reg, "pc");
+	pc = r_reg_getv (emu->anal->reg, "pc");
 	if (pc != gb->not_match_sleep_addr) {
 		r_emu_th_lock_lock (&gb->sleeper->lock);
 		gb->sleeper->to_sleep += gb->not_match_sleep;
@@ -637,7 +635,7 @@ static bool gb_post_loop (REmu *emu) {
 	gb->not_match_sleep = 0;
 	gb->not_match_sleep_addr = 0LL;
 
-	ime = r_reg_getv(emu->anal->reg, "ime");
+	ime = r_reg_getv (emu->anal->reg, "ime");
 	r_io_fd_read_at (emu->io, gb->if_fd, 0LL, &iflags, 1);
 	r_io_fd_read_at (emu->io, gb->ie_fd, 0LL, &ieflags, 1);
 	joypad = r_emu_interactor_poll_joypad (emu->interactor);
@@ -647,7 +645,7 @@ static bool gb_post_loop (REmu *emu) {
 	iv = ime ? iflags & eiflags : 0;
 	intr = 0;
 	for (i = 0; i < 5; i++) {
-		if (iv & (1<<i)) {
+		if (iv & (1 << i)) {
 			intr = 40 + i << 3;
 			break;
 		}
