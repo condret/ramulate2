@@ -136,7 +136,7 @@ static bool __gb_timers_check(RIO *io, const char *path, bool many) {
 	return path && (strstr (path, "gb_timers://") == path);
 }
 
-RIOPlugin r_io_wild_gb_timers_plugin{
+RIOPlugin r_io_wild_gb_timers_plugin = {
 	.name = "gb_timers",
 	.desc = "Represent GB-Timers",
 	.license = "LGPL3",
@@ -350,7 +350,7 @@ static ut64 gb_get_bg_base(GBMMSCR *screen) {
 	return (screen->lcdc & 0x8) ? 0x9c00 : 0x9800;
 }
 
-static void gb_fetcher_continue(Gameboy *gb.RIO *io) {
+static void gb_fetcher_continue(Gameboy *gb, RIO *io) {
 	GBOamEntry *sprite;
 	GBPixelFetcher *fetcher = &gb->ppu.fetcher;
 	ut32 ctr;
@@ -508,7 +508,7 @@ static bool __gb_screen_check(RIO *io, const char *path, bool many) {
 	return path && (strstr (path, "gb_screen://") == path);
 }
 
-RIOPlugin r_io_wild_gb_screen_plugin{
+RIOPlugin r_io_wild_gb_screen_plugin = {
 	.name = "gb_screen",
 	.desc = "Represent GB-Timers",
 	.license = "LGPL3",
@@ -525,20 +525,36 @@ static void *gb_init(REmu *emu) {
 	if (!gb) {
 		return NULL;
 	}
+	// open r_io_fd for hram
 	gb->hram_fd = r_io_fd_open (emu->io, "malloc://0x7f", R_IO_RWX, 0644);
+	// map hram to 0xff80
 	gb->hram_map_id = r_map_add (emu->io, gb->hram_fd, R_IO_RWX, 0LL, 0xff80, 0x7f);
+
+	// open r_io_fd for vram
 	gb->vram_fd = r_io_fd_open (emu->io, "malloc://0x2000", R_IO_RWX, 0644);
+	// map vram to 0x2000
 	gb->vram_map_id = r_io_map_add (emu->io, gb->vram_fd, R_IO_RWX, 0LL, 0x8000, 0x2000);
+
+	// open r_io_fd for oam
 	gb->oam_fd = r_io_fd_open (emu->io, "malloc://0xa0", R_IO_RWX, 0644);
+	// map oam to 0xfe00
 	gb->oam_map_id = r_io_map_add (emu->io, gb->oam_fd, R_IO_RWX, 0LL, 0xfe00);
+
+
+	// open r_io_fd for timers
 	sprintf (gbstrbuf, "gb_timers://%p", gb);
 	gb->timers_fd = r_io_desc_open_plugin (emu->io, &r_io_wild_gb_timers_plugin, gbstrbuf, R_IO_RWX, 0644)->fd; //well, this might segfault, but E_TOO_LAZY
+	//map timers at 0xff04
 	gb->timers_map_id = r_io_map_add (emu->io, gb->timers_fd, R_IO_RWX, 0LL, 0xff04, 4);
+
+
 	sprintf (gbstrbuf, "gb_screen://%p", gb);
 	gb->screen_fd = r_io_desc_open_plugin (emu->io, &r_io_wild_gb_screen_plugin, gbstrbuf, R_IO_RWX, 0644)->fd;
 	gb->screen_map_id = r_io_map_add (emu->io, gb->screen_fd, R_IO_RWX, 0LL, 0xff40, 12);
+
 	gb->if_fd = r_io_fd_open (emu->io, "malloc://1", R_IO_RWX, 0644);
 	r_io_map_add (emu->io, gb->if_fd, R_IO_RWX, 0LL, 0xff0f, 1);
+
 	gb->ie_fd = r_io_fd_open (emu->io, "malloc://1", R_IO_RWX, 0644);
 	r_io_map_add (emu->io, gb->ie_fd, R_IO_RWX, 0LL, 0xffff, 1);
 
