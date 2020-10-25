@@ -26,6 +26,13 @@ typedef struct r_emulator_plugin_t {
 	bool (*post_loop)(REmu *emu);
 } REmuPlugin;
 
+typedef struct r_emulator_sleeper_t {
+	RThread *me;
+	RThreadLock *lock;
+	double cycle_duration;	// nanoseconds
+	ut32 cycles;
+} REmuSleeper;
+
 R_API REmuPlugin *r_emu_plugin_get(char *arch);
 R_API void *r_emu_plugin_init(REmuPlugin *p, REmu *emu);
 R_API void r_emu_plugin_fini(REmuPlugin *p, void *user);
@@ -36,6 +43,10 @@ R_API REmu *r_emu_new();
 R_API bool r_emu_load(REmu *emu, char *arch);
 R_API void r_emu_unload(REmu *emu);
 R_API void r_emu_free (REmu *emu);
+
+R_API REmuSleeper *r_emu_sleeper_new(double cycle_duration);
+R_API void r_emu_sleeper_wait_for_wakeup_and_set_cycles(REmuSleeper *sleeper, ut32 cycles);
+R_API void r_emu_sleeper_free(REmuSleeper *sleeper);
 
 
 #define	r_emu_nop()	asm volatile ("nop")
