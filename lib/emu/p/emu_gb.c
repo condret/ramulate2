@@ -525,6 +525,12 @@ static void *gb_init(REmu *emu) {
 	if (!gb) {
 		return NULL;
 	}
+	gb->sleeper = r_emu_sleeper_new (1000000000 / 4194304);
+	if (!gb->sleeper) {
+		free (gb);
+		return NULL;
+	}
+	gb->success_extra_cycles = 0;
 	// open r_io_fd for hram
 	gb->hram_fd = r_io_fd_open (emu->io, "malloc://0x7f", R_IO_RWX, 0644);
 	// map hram to 0xff80
@@ -564,6 +570,10 @@ static void *gb_init(REmu *emu) {
 }
 
 static void gb_fini(void *user) {
+	if (user) {
+		Gameboy *gb = (Gameboy *gb)user;
+		r_emu_sleeper_free (gb->sleeper);
+	}
 	free (user); //io will cleanup itself :D
 }
 
@@ -593,40 +603,37 @@ static bool gb_pre_loop(REmu *emu, RAnalOp *op, ut8 *bytes) {
 	Gameboy *gb = (Gameboy *)emu->user;
 	if (bytes[0] == 0x10) {
 		r_strbuf_set (op->esil, "STOP");
-		gb->sleep = op->cycles = 0;
+		//gb->sleep = op->cycles = 0;
 		//wait for sleeper to wake up
 		return true;
 	}
 	if (bytes[0] == 0x76) {
 		r_strbuf_set (op->esil, "HALT");
-		gb->sleep = op->cycles = 0;
+		//gb->sleep = op->cycles = 0;
 		//wait for sleeper to wake up
 		return true;
 	}
 
-	//prepare sleeper for next instruction
-	r_emu_th_lock_lock (&gb->sleeper->lock)
-		gb->sleeper->to_sleep = op->cycles;
-	//wait for sleeper to wake up
-	while (!gb->sleeper->sleeping) {
-		r_emu_nop ();
-	}
-	//activate sleeper here:
-	r_emu_th_lock_unlock (&gb->sleeper->lock)
-
-		gb_proceed_div (gb->timers, op->cycles);
-	gb_proceed_tima (gb, op->cycles);
-	gb_proceed_dma (gb, emu->io, op->cycles);
-
+	ut32 cycles;
 	switch (op->type) {
 	case R_ANAL_OP_TYPE_CRET: //I'm a condret :)
 	case R_ANAL_OP_TYPE_CJMP:
 	case R_ANAL_OP_TYPE_UCJMP:
 	case R_ANAL_OP_TYPE_CCALL:
 	case R_ANAL_OP_TYPE_UCCALL:
-		gb->not_match_sleep_addr = op->addr + op->size;
-		gb->not_match_sleep = op->cycles - op->failcycles;
+		gb->fail_address = op->addr + op->size;
+		gb->success_extra_cycles = op->cycles - op->failcycles;
+		cycles = op->failcycles;
+		break;
+	default:
+		cycles = op->cycles;
 	}
+
+	r_emu_sleeper_wait_for_wakeup_and_set_cycles (gb->sleeper, cycles);
+	gb_proceed_div (gb->timers, cycles);
+	gb_proceed_tima (gb, cycles);
+	gb_proceed_dma (gb, emu->io, cycles);
+
 	return true;
 }
 
@@ -639,17 +646,13 @@ static bool gb_post_loop(REmu *emu) {
 	}
 	gb = (Gameboy *)emu->user;
 	pc = r_reg_getv (emu->anal->reg, "pc");
-	if (pc != gb->not_match_sleep_addr) {
-		r_emu_th_lock_lock (&gb->sleeper->lock);
-		gb->sleeper->to_sleep += gb->not_match_sleep;
-		r_emu_th_lock_unlock (&gb->sleeper->lock);
-		gb_proceed_div (gb->timers, gb->not_match_sleep);
-		gb_proceed_tima (gb, gb->not_match_sleep);
-		gb_proceed_dma (gb, emu->io, gb->not_match_sleep);
+	if (gb->success_extra_cycles && pc != gb->fail_address) {
+		r_emu_sleeper_wait_for_wakeup_and_set_cycles (gb->sleeper, gb->success_extra_cycles);
+		gb_proceed_div (gb->timers, gb->success_extra_cycles);
+		gb_proceed_tima (gb, gb->success_extra_cycles);
+		gb_proceed_dma (gb, emu->io, gb->success_extra_cycles);
+		gb->success_extra_cycles = 0;
 	}
-	gb->sleep = 0;
-	gb->not_match_sleep = 0;
-	gb->not_match_sleep_addr = 0LL;
 
 	ime = r_reg_getv (emu->anal->reg, "ime");
 	r_io_fd_read_at (emu->io, gb->if_fd, 0LL, &iflags, 1);
