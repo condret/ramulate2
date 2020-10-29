@@ -599,6 +599,12 @@ static void gb_proceed_tima(Gameboy *gb, ut32 cycles) {
 	}
 }
 
+void gb_proceed_hardware(Gameboy *gb, REmu *emu, ut32 cycles) {
+	gb_proceed_div (gb->timers, cycles);
+	gb_proceed_tima (gb, cycles);
+	gb_proceed_dma (gb, emu->io, cycles);
+}
+
 static bool gb_pre_loop(REmu *emu, RAnalOp *op, ut8 *bytes) {
 	Gameboy *gb = (Gameboy *)emu->user;
 	if (bytes[0] == 0x10) {
@@ -630,9 +636,7 @@ static bool gb_pre_loop(REmu *emu, RAnalOp *op, ut8 *bytes) {
 	}
 
 	r_emu_sleeper_wait_for_wakeup_and_set_cycles (gb->sleeper, cycles);
-	gb_proceed_div (gb->timers, cycles);
-	gb_proceed_tima (gb, cycles);
-	gb_proceed_dma (gb, emu->io, cycles);
+	gb_proceed_hardware (gb, emu, cycles);
 
 	return true;
 }
@@ -648,9 +652,7 @@ static bool gb_post_loop(REmu *emu) {
 	pc = r_reg_getv (emu->anal->reg, "pc");
 	if (gb->success_extra_cycles && pc != gb->fail_address) {
 		r_emu_sleeper_wait_for_wakeup_and_set_cycles (gb->sleeper, gb->success_extra_cycles);
-		gb_proceed_div (gb->timers, gb->success_extra_cycles);
-		gb_proceed_tima (gb, gb->success_extra_cycles);
-		gb_proceed_dma (gb, emu->io, gb->success_extra_cycles);
+		gb_proceed_hardware (gb, emu, cycles);
 		gb->success_extra_cycles = 0;
 	}
 
